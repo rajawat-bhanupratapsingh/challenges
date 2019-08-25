@@ -1,59 +1,32 @@
 class WebsiteController < ApplicationController
+  before_action :check_for_omise_token, only: [:donate]
+  before_action :check_for_amount, only: [:donate]
+  before_action :find_and_check_for_charity, only: [:donate]
+
   def index
     @token = nil
   end
 
   def donate
-    charity = find_charity
-    if params[:omise_token].present?
-      unless params[:amount].blank? || params[:amount].to_i <= 20
-        unless !charity
-          if Rails.env.test?
-            charge = OpenStruct.new({
-              amount: params[:amount].to_i * 100,
-              paid: (params[:amount].to_i != 999),
-            })
-          else
-            charge = Omise::Charge.create({
-              amount: params[:amount].to_i * 100,
-              currency: "THB",
-              card: params[:omise_token],
-              description: "Donation to #{charity.name} [#{charity.id}]",
-            })
-          end
-          if charge.paid
-            charity.credit_amount(charge.amount)
-          end
-        else
-          @token = retrieve_token(params[:omise_token])
-          flash.now.alert = t(".failure")
-          render :index
-          return
-        end
-      else
-        @token = retrieve_token(params[:omise_token])
-        flash.now.alert = t(".failure")
-        render :index
-        return
-      end
+    if Rails.env.test?
+      charge = OpenStruct.new({
+        amount: params[:amount].to_i * 100,
+        paid: (params[:amount].to_i != 999),
+      })
     else
-      @token = nil
-      flash.now.alert = t(".failure")
-      render :index
-      return
-    end
-    if !charity
-      @token = nil
-      flash.now.alert = t(".failure")
-      render :index
-      return
+      charge = Omise::Charge.create({
+        amount: params[:amount].to_i * 100,
+        currency: "THB",
+        card: params[:omise_token],
+        description: "Donation to #{@charity.name} [#{@charity.id}]",
+      })
     end
     if charge.paid
+      @charity.credit_amount(charge.amount)
       flash.notice = t(".success")
       redirect_to root_path
     else
-      @token = nil
-      flash.now.alert = t(".failure")
+      handle_failure(params[:omise_token])
       render :index
     end
   end
@@ -77,11 +50,38 @@ class WebsiteController < ApplicationController
     end
   end
 
-  def find_charity
-    if params[:charity] == "random"
+  def check_for_omise_token
+    if params[:omise_token].blank?
+      handle_failure(nil)
+      return render(:index)
+    end
+  end
+
+  def check_for_amount
+    if params[:amount].blank? || params[:amount].to_i <= 20
+      handle_failure(params[:omise_token])
+      return render(:index)
+    end
+  end
+
+  def find_and_check_for_charity
+    @charity = find_charity(params[:charity])
+    if @charity.nil?
+      handle_failure(nil)
+      return render(:index)
+    end
+  end
+
+  def find_charity(charity_param)
+    if charity_param == "random"
       Charity.all.sample
     else
-      @app.find_charity(params[:charity])
+      @app.find_charity(charity_param)
     end
+  end
+
+  def handle_failure(token)
+    @token = token.present? ? retrieve_token(token) : nil
+    flash.now.alert = t(".failure")
   end
 end
