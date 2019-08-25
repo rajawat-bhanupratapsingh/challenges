@@ -10,12 +10,12 @@ class WebsiteController < ApplicationController
   def donate
     if Rails.env.test?
       charge = OpenStruct.new({
-        amount: params[:amount].to_i * 100,
+        amount: total_amount,
         paid: (params[:amount].to_i != 999),
       })
     else
       charge = Omise::Charge.create({
-        amount: params[:amount].to_i * 100,
+        amount: total_amount,
         currency: "THB",
         card: params[:omise_token],
         description: "Donation to #{@charity.name} [#{@charity.id}]",
@@ -48,6 +48,10 @@ class WebsiteController < ApplicationController
     else
       Omise::Token.retrieve(token)
     end
+  end
+
+  def total_amount
+    params[:amount].to_i * 100 + params[:subunits].to_i
   end
 
   def check_for_omise_token

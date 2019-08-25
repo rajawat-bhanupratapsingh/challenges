@@ -19,6 +19,7 @@
   <div>
     <%= label_tag :amount %><br>
     <%= number_field_tag :amount, 500 %> THB
+    <%= select_tag :subunits, options_for_select(Charity::SUBUNITS), prompt: "00" %> Satang
   </div>
 
   <% if @token && @token.card.security_code_check %>
