@@ -8,19 +8,12 @@ class WebsiteController < ApplicationController
   end
 
   def donate
-    if Rails.env.test?
-      charge = OpenStruct.new({
-        amount: total_amount,
-        paid: (params[:amount].to_i != 999),
-      })
-    else
-      charge = Omise::Charge.create({
-        amount: total_amount,
-        currency: "THB",
-        card: params[:omise_token],
-        description: "Donation to #{@charity.name} [#{@charity.id}]",
-      })
-    end
+    charge = Omise::Charge.create({
+      amount: total_amount,
+      currency: "THB",
+      card: params[:omise_token],
+      description: "Donation to #{@charity.name} [#{@charity.id}]",
+    })
     if charge.paid
       @charity.credit_amount(charge.amount)
       flash.notice = t(".success")
@@ -34,20 +27,7 @@ class WebsiteController < ApplicationController
   private
 
   def retrieve_token(token)
-    if Rails.env.test?
-      OpenStruct.new({
-        id: "tokn_X",
-        card: OpenStruct.new({
-          name: "J DOE",
-          last_digits: "4242",
-          expiration_month: 10,
-          expiration_year: 2020,
-          security_code_check: false,
-        }),
-      })
-    else
-      Omise::Token.retrieve(token)
-    end
+    Omise::Token.retrieve(token)
   end
 
   def total_amount

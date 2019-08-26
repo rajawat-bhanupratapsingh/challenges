@@ -1,6 +1,17 @@
 require "test_helper"
 
 class WebsiteTest < ActionDispatch::IntegrationTest
+  OMISE_TOKEN = OpenStruct.new({
+    id: "tokn_X",
+    card: OpenStruct.new({
+      name: "J DOE",
+      last_digits: "4242",
+      expiration_month: 10,
+      expiration_year: 2020,
+      security_code_check: false,
+    }),
+  })
+
   test "should get index" do
     get "/"
 
@@ -18,9 +29,11 @@ class WebsiteTest < ActionDispatch::IntegrationTest
 
   test "that someone can't donate 0 to a charity" do
     charity = charities(:children)
-    post(donate_path, params: {
-           amount: "0", omise_token: "tokn_X", charity: charity.id
-         })
+    Omise::Token.stub(:retrieve, OMISE_TOKEN) do
+      post(donate_path, params: {
+             amount: "0", omise_token: "tokn_X", charity: charity.id
+           })
+    end
 
     assert_template :index
     assert_equal t("website.donate.failure"), flash.now[:alert]
@@ -28,9 +41,11 @@ class WebsiteTest < ActionDispatch::IntegrationTest
 
   test "that someone can't donate less than 20 to a charity" do
     charity = charities(:children)
-    post(donate_path, params: {
-           amount: "19", omise_token: "tokn_X", charity: charity.id
-         })
+    Omise::Token.stub(:retrieve, OMISE_TOKEN) do
+      post(donate_path, params: {
+             amount: "19", omise_token: "tokn_X", charity: charity.id
+           })
+    end
 
     assert_template :index
     assert_equal t("website.donate.failure"), flash.now[:alert]
@@ -49,11 +64,15 @@ class WebsiteTest < ActionDispatch::IntegrationTest
   test "that someone can donate to a charity" do
     charity = charities(:children)
     initial_total = charity.total
-    expected_total = initial_total + (100 * 100)
+    total_amount = 100 * 100
+    expected_total = initial_total + total_amount
+    charge_stub = OpenStruct.new(amount: total_amount, paid: true)
 
-    post(donate_path, params: {
-           amount: "100", omise_token: "tokn_X", charity: charity.id
-         })
+    Omise::Charge.stub(:create, charge_stub) do
+      post(donate_path, params: {
+             amount: "100", omise_token: "tokn_X", charity: charity.id
+           })
+    end
     follow_redirect!
 
     assert_template :index
@@ -64,11 +83,15 @@ class WebsiteTest < ActionDispatch::IntegrationTest
   test "that someone can donate some amount with subunits to a charity" do
     charity = charities(:children)
     initial_total = charity.total
-    expected_total = initial_total + (100 * 100 + 25)
+    total_amount = 100 * 100 + 25
+    expected_total = initial_total + total_amount
+    charge_stub = OpenStruct.new(amount: total_amount, paid: true)
 
-    post(donate_path, params: {
-           amount: "100", subunits: "25", omise_token: "tokn_X", charity: charity.id
-         })
+    Omise::Charge.stub(:create, charge_stub) do
+      post(donate_path, params: {
+             amount: "100", subunits: "25", omise_token: "tokn_X", charity: charity.id
+           })
+    end
     follow_redirect!
 
     assert_template :index
@@ -78,11 +101,15 @@ class WebsiteTest < ActionDispatch::IntegrationTest
 
   test "that if the charge fail from omise side it shows an error" do
     charity = charities(:children)
+    charge_stub = OpenStruct.new(paid: false)
 
-    # 999 is used to set paid as false
-    post(donate_path, params: {
-           amount: "999", omise_token: "tokn_X", charity: charity.id
-         })
+    Omise::Charge.stub(:create, charge_stub) do
+      Omise::Token.stub(:retrieve, OMISE_TOKEN) do
+        post(donate_path, params: {
+               amount: "999", omise_token: "tokn_X", charity: charity.id
+             })
+      end
+    end
 
     assert_template :index
     assert_equal t("website.donate.failure"), flash.now[:alert]
@@ -91,11 +118,15 @@ class WebsiteTest < ActionDispatch::IntegrationTest
   test "that we can donate to a charity at random" do
     charities = Charity.all
     initial_total = charities.to_a.sum(&:total)
-    expected_total = initial_total + (100 * 100)
+    total_amount = 100 * 100
+    expected_total = initial_total + total_amount
+    charge_stub = OpenStruct.new(amount: total_amount, paid: true)
 
-    post(donate_path, params: {
-           amount: "100", omise_token: "tokn_X", charity: "random"
-         })
+    Omise::Charge.stub(:create, charge_stub) do
+      post(donate_path, params: {
+             amount: "100", omise_token: "tokn_X", charity: "random"
+           })
+    end
     follow_redirect!
 
     assert_template :index
