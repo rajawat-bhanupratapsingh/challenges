@@ -1,21 +1,23 @@
 class WebsiteController < ApplicationController
   before_action :check_for_omise_token, only: [:donate]
   before_action :check_for_amount, only: [:donate]
-  before_action :find_and_check_for_charity, only: [:donate]
 
   def index
     @token = nil
   end
 
   def donate
-    charge = Omise::Charge.create({
-      amount: total_amount,
-      currency: "THB",
-      card: params[:omise_token],
-      description: "Donation to #{@charity.name} [#{@charity.id}]",
-    })
-    if charge.paid
-      @charity.credit_amount(charge.amount)
+    charity = @app.find_or_random_charity(params[:charity])
+
+    if charity.nil?
+      handle_failure(nil)
+      return render(:index)
+    end
+
+    charge = OmiseApi.create_charge(charity, charge_params)
+
+    if charge && charge.paid
+      charity.credit_amount(charge.amount)
       flash.notice = t(".success")
       redirect_to root_path
     else
@@ -25,14 +27,6 @@ class WebsiteController < ApplicationController
   end
 
   private
-
-  def retrieve_token(token)
-    Omise::Token.retrieve(token)
-  end
-
-  def total_amount
-    params[:amount].to_i * 100 + params[:subunits].to_i
-  end
 
   def check_for_omise_token
     if params[:omise_token].blank?
@@ -48,24 +42,12 @@ class WebsiteController < ApplicationController
     end
   end
 
-  def find_and_check_for_charity
-    @charity = find_charity(params[:charity])
-    if @charity.nil?
-      handle_failure(nil)
-      return render(:index)
-    end
-  end
-
-  def find_charity(charity_param)
-    if charity_param == "random"
-      Charity.all.sample
-    else
-      @app.find_charity(charity_param)
-    end
+  def charge_params
+    params.permit(:amount, :subunits, :omise_token)
   end
 
   def handle_failure(token)
-    @token = token.present? ? retrieve_token(token) : nil
+    @token = OmiseApi.retrieve_token(token)
     flash.now.alert = t(".failure")
   end
 end

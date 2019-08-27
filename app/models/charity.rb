@@ -1,5 +1,6 @@
 class Charity < ActiveRecord::Base
   SUBUNITS = [25, 50, 75].freeze
+  DEFAULT_CURRENCY = "THB".freeze
 
   validates :name, presence: true
 
