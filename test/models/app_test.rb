@@ -69,4 +69,13 @@ class AppTest < ActiveSupport::TestCase
 
     assert_equal charity.id, found_charity.id
   end
+
+  test "that we can find a charity by id or select one at random" do
+    charities = charities(:children, :community, :environment)
+    random_charity = @_app.find_or_random_charity(charities.first.id)
+    found_charity = @_app.find_or_random_charity("random")
+
+    assert_equal charities.first.id, random_charity.id
+    assert_includes charities, found_charity
+  end
 end

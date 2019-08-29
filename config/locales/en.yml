@@ -20,3 +20,5 @@ en:
       failure: "It seems like this didn't work so well. Try again maybe?"
     labels:
       any_one_at_random:  "Any one at random"
+    index:
+      use_another_card: "Use another card"

@@ -1,5 +1,9 @@
 module OmiseApi
   def self.create_charge(charity, parameters)
+    if charity.blank? || !required_parameters?(parameters)
+      return nil
+    end
+
     begin
       Omise::Charge.create({
         amount: total_amount(parameters[:amount], parameters[:subunits]),
@@ -27,6 +31,13 @@ module OmiseApi
   private
 
   def self.total_amount(amount, subunits)
-    amount.to_i * 100 + subunits.to_i
+    total = amount.to_i * 100
+    total += subunits.to_i if subunits.present?
+    total
+  end
+
+  def self.required_parameters?(parameters)
+    parameters = parameters.symbolize_keys if parameters.is_a?(Hash)
+    parameters.has_key?(:amount) && parameters.has_key?(:omise_token)
   end
 end

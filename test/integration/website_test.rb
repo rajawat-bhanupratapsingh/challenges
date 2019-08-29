@@ -29,7 +29,7 @@ class WebsiteTest < ActionDispatch::IntegrationTest
 
   test "that someone can't donate 0 to a charity" do
     charity = charities(:children)
-    Omise::Token.stub(:retrieve, OMISE_TOKEN) do
+    OmiseApi.stub(:retrieve_token, OMISE_TOKEN) do
       post(donate_path, params: {
              amount: "0", omise_token: "tokn_X", charity: charity.id
            })
@@ -41,7 +41,7 @@ class WebsiteTest < ActionDispatch::IntegrationTest
 
   test "that someone can't donate less than 20 to a charity" do
     charity = charities(:children)
-    Omise::Token.stub(:retrieve, OMISE_TOKEN) do
+    OmiseApi.stub(:retrieve_token, OMISE_TOKEN) do
       post(donate_path, params: {
              amount: "19", omise_token: "tokn_X", charity: charity.id
            })
@@ -68,7 +68,7 @@ class WebsiteTest < ActionDispatch::IntegrationTest
     expected_total = initial_total + total_amount
     charge_stub = OpenStruct.new(amount: total_amount, paid: true)
 
-    Omise::Charge.stub(:create, charge_stub) do
+    OmiseApi.stub(:create_charge, charge_stub) do
       post(donate_path, params: {
              amount: "100", omise_token: "tokn_X", charity: charity.id
            })
@@ -87,7 +87,7 @@ class WebsiteTest < ActionDispatch::IntegrationTest
     expected_total = initial_total + total_amount
     charge_stub = OpenStruct.new(amount: total_amount, paid: true)
 
-    Omise::Charge.stub(:create, charge_stub) do
+    OmiseApi.stub(:create_charge, charge_stub) do
       post(donate_path, params: {
              amount: "100", subunits: "25", omise_token: "tokn_X", charity: charity.id
            })
@@ -103,8 +103,8 @@ class WebsiteTest < ActionDispatch::IntegrationTest
     charity = charities(:children)
     charge_stub = OpenStruct.new(paid: false)
 
-    Omise::Charge.stub(:create, charge_stub) do
-      Omise::Token.stub(:retrieve, OMISE_TOKEN) do
+    OmiseApi.stub(:create_charge, charge_stub) do
+      OmiseApi.stub(:retrieve_token, OMISE_TOKEN) do
         post(donate_path, params: {
                amount: "999", omise_token: "tokn_X", charity: charity.id
              })
@@ -122,7 +122,7 @@ class WebsiteTest < ActionDispatch::IntegrationTest
     expected_total = initial_total + total_amount
     charge_stub = OpenStruct.new(amount: total_amount, paid: true)
 
-    Omise::Charge.stub(:create, charge_stub) do
+    OmiseApi.stub(:create_charge, charge_stub) do
       post(donate_path, params: {
              amount: "100", omise_token: "tokn_X", charity: "random"
            })
