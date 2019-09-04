@@ -10,16 +10,19 @@ class Donation
     @charity = charity
     @omise_token = params[:omise_token]
     @amount = params[:amount].to_i
-    @subunits = params[:subunits]
+    @subunits = params[:subunits].to_i
   end
 
   def create
     return false unless valid?
 
+    result = false
     charge = OmiseApi.create_charge(charity, charge_params)
     if charge && charge.paid
-      charity.credit_amount(charge.amount)
+      result = charity.credit_amount(charge.amount)
     end
+
+    return result
   end
 
   private

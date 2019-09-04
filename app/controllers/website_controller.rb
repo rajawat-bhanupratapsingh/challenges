@@ -12,7 +12,8 @@ class WebsiteController < ApplicationController
       redirect_to root_path
     else
       @token = OmiseApi.retrieve_token(params[:omise_token])
-      # Note: Can flash donation validation errros as well.
+      # Note: Can flash donation validation errors as well.
+      # flash.now.alert = donation.errors.full_messages.join(', ')
       flash.now.alert = t(".failure")
       render :index
     end
